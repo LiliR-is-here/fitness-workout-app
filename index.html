@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>每日训练助手</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#090F0B;--surface:#0F1A12;--surface2:#162019;
+  --border:rgba(255,255,255,0.07);--text:#D8E8DC;
+  --text-sec:#5A7A63;--text-dim:#2A3E2F;
+  --accent:#4CA86A;--radius:16px;
+}
+html,body{width:100%;height:100vh;background:var(--bg);color:var(--text);
+  font-family:-apple-system,'PingFang SC','Noto Sans SC','Microsoft YaHei',sans-serif;
+  overflow:hidden;-webkit-user-select:none;user-select:none;}
+#app{width:100%;height:100%;max-width:430px;margin:0 auto;position:relative;overflow:hidden;}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity 0.25s ease;}
+.screen.active{opacity:1;pointer-events:all}
+
+#s-start{justify-content:flex-end;padding:0 0 max(40px,env(safe-area-inset-bottom))}
+.start-top{flex:1;display:flex;flex-direction:column;justify-content:center;padding:40px 28px 0}
+.brand{font-size:11px;letter-spacing:0.18em;color:var(--text-sec);margin-bottom:20px}
+.start-title{font-size:32px;font-weight:300;line-height:1.25;color:var(--text);margin-bottom:10px}
+.start-title em{font-style:normal;color:var(--accent);font-weight:500}
+.start-sub{font-size:14px;color:var(--text-sec);margin-bottom:36px}
+.plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.plan-cell{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.plan-cell-dot{width:6px;height:6px;border-radius:3px;margin-bottom:10px}
+.plan-cell-phase{font-size:13px;font-weight:500;margin-bottom:3px}
+.plan-cell-sub{font-size:11px;color:var(--text-sec)}
+.start-bottom{padding:28px 28px 0}
+.btn-big{width:100%;padding:17px;border:none;border-radius:var(--radius);font-size:16px;font-weight:500;
+  font-family:inherit;cursor:pointer;transition:opacity 0.15s,transform 0.1s;
+  background:var(--accent);color:#060E08;margin-bottom:16px;}
+.btn-big:active{opacity:0.85;transform:scale(0.98)}
+.voice-row{display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0}
+.voice-row-label{font-size:13px;color:var(--text-sec)}
+.tog-track{width:38px;height:22px;border-radius:11px;background:var(--surface2);position:relative;transition:background 0.2s;flex-shrink:0}
+.tog-track.on{background:var(--accent)}
+.tog-thumb{width:18px;height:18px;border-radius:9px;background:white;position:absolute;top:2px;left:2px;transition:transform 0.2s}
+.tog-track.on .tog-thumb{transform:translateX(16px)}
+
+#s-exercise{padding:0}
+.ex-header{display:flex;align-items:center;padding:max(16px,env(safe-area-inset-top)) 20px 12px;gap:10px;flex-shrink:0}
+.ex-idx{font-size:12px;color:var(--text-sec)}
+.ex-prog-wrap{flex:1;height:2px;background:var(--border);border-radius:1px;overflow:hidden}
+.ex-prog-fill{height:100%;border-radius:1px;transition:width 0.4s,background 0.3s}
+.ex-phase-pill{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:500;letter-spacing:0.03em}
+.ex-voice-btn{width:30px;height:30px;border-radius:50%;border:1px solid var(--border);background:transparent;
+  color:var(--text-sec);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-family:inherit;flex-shrink:0}
+.ex-voice-btn.off{color:var(--text-dim)}
+.ex-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 28px;min-height:0}
+.ex-name{font-size:24px;font-weight:500;text-align:center;line-height:1.3;margin-bottom:5px}
+.ex-detail{font-size:12px;color:var(--text-sec);text-align:center;margin-bottom:24px}
+
+.ring-outer{position:relative;width:176px;height:176px;margin-bottom:20px;flex-shrink:0}
+.ring-svg{transform:rotate(-90deg)}
+.ring-bg{stroke:var(--surface2)}
+.ring-fill{stroke-linecap:round;transition:stroke-dashoffset 1.05s linear,stroke 0.3s}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-num{font-size:42px;font-weight:200;letter-spacing:-0.02em;line-height:1}
+.ring-lbl{font-size:10px;color:var(--text-sec);letter-spacing:0.06em;margin-top:4px}
+
+.rep-outer{display:flex;flex-direction:column;align-items:center;margin-bottom:20px;width:100%}
+.rep-num{font-size:88px;font-weight:200;line-height:1;letter-spacing:-0.04em}
+.rep-of{font-size:14px;color:var(--text-sec);margin-top:2px;margin-bottom:18px}
+.rep-tap{width:100%;padding:16px;border-radius:var(--radius);border:none;
+  font-size:15px;font-weight:500;font-family:inherit;cursor:pointer;transition:transform 0.1s}
+.rep-tap:active{transform:scale(0.97)}
+.rep-finish{width:100%;padding:14px;margin-top:8px;border-radius:var(--radius);
+  border:1px solid var(--border);background:transparent;color:var(--text-sec);
+  font-size:14px;font-weight:500;font-family:inherit;cursor:pointer}
+
+.ex-cue{font-size:13px;color:var(--text-sec);text-align:center;line-height:1.85;white-space:pre-line}
+.ex-controls{display:flex;gap:10px;padding:16px 20px max(28px,env(safe-area-inset-bottom));flex-shrink:0}
+.ctrl{flex:1;padding:14px 8px;border-radius:var(--radius);border:1px solid var(--border);
+  background:var(--surface);color:var(--text-sec);font-size:13px;font-weight:500;font-family:inherit;
+  cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ctrl:active{opacity:0.7;transform:scale(0.97)}
+.ctrl-main{flex:1.6;color:var(--text);background:var(--surface2);border-color:transparent}
+.ctrl-main.going{background:rgba(76,168,106,0.12)}
+
+#s-rest{justify-content:center;align-items:center;padding:40px 28px;text-align:center}
+.rest-next-lbl{font-size:11px;color:var(--text-dim);letter-spacing:0.08em;margin-bottom:14px}
+.rest-name{font-size:22px;font-weight:500;margin-bottom:8px}
+.rest-pill{font-size:11px;padding:3px 12px;border-radius:20px;font-weight:500;margin-bottom:52px;display:inline-block}
+.rest-n{font-size:80px;font-weight:200;letter-spacing:-0.04em;color:var(--text-sec);line-height:1}
+.rest-hint{font-size:12px;color:var(--text-dim);margin-top:12px}
+
+#s-done{justify-content:center;align-items:center;padding:40px 28px max(56px,env(safe-area-inset-bottom));text-align:center}
+.done-mark{width:64px;height:64px;border-radius:32px;border:1.5px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;margin-bottom:28px}
+.done-title{font-size:26px;font-weight:500;margin-bottom:12px}
+.done-msg{font-size:14px;color:var(--text-sec);line-height:1.8;margin-bottom:52px}
+.btn-restart{width:100%;padding:15px;border-radius:var(--radius);border:1px solid var(--border);
+  background:var(--surface);color:var(--text-sec);font-size:14px;font-weight:500;font-family:inherit;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="app">
+
+<div id="s-start" class="screen active">
+  <div class="start-top">
+    <div class="brand">每日训练助手</div>
+    <h1 class="start-title">开始今天的<br><em>20 分钟</em>训练</h1>
+    <p class="start-sub">4 个阶段 · 8 个动作 · 语音引导</p>
+    <div class="plan-grid">
+      <div class="plan-cell">
+        <div class="plan-cell-dot" style="background:#5DCAA5"></div>
+        <div class="plan-cell-phase" style="color:#5DCAA5">释放</div>
+        <div class="plan-cell-sub">2 动作 · 4 min</div>
+      </div>
+      <div class="plan-cell">
+        <div class="plan-cell-dot" style="background:#378ADD"></div>
+        <div class="plan-cell-phase" style="color:#378ADD">核心激活</div>
+        <div class="plan-cell-sub">3 动作 · 8 min</div>
+      </div>
+      <div class="plan-cell">
+        <div class="plan-cell-dot" style="background:#8B7FD4"></div>
+        <div class="plan-cell-phase" style="color:#8B7FD4">上背部激活</div>
+        <div class="plan-cell-sub">2 动作 · 4 min</div>
+      </div>
+      <div class="plan-cell">
+        <div class="plan-cell-dot" style="background:#D4921A"></div>
+        <div class="plan-cell-phase" style="color:#D4921A">整合</div>
+        <div class="plan-cell-sub">1 动作 · 2 min</div>
+      </div>
+    </div>
+  </div>
+  <div class="start-bottom">
+    <button class="btn-big" onclick="startWorkout()">开始训练</button>
+    <div class="voice-row" onclick="toggleVoice()">
+      <div class="tog-track on" id="tog"><div class="tog-thumb"></div></div>
+      <span class="voice-row-label" id="vlab">语音播报已开启</span>
+    </div>
+  </div>
+</div>
+
+<div id="s-exercise" class="screen">
+  <div class="ex-header">
+    <span class="ex-idx" id="ex-idx">1 / 8</span>
+    <div class="ex-prog-wrap"><div class="ex-prog-fill" id="ex-prog" style="width:12.5%"></div></div>
+    <span class="ex-phase-pill" id="ex-pill">释放</span>
+    <button class="ex-voice-btn" id="ex-vbtn" onclick="toggleVoice()" aria-label="切换语音">🔊</button>
+  </div>
+  <div class="ex-body">
+    <div class="ex-name" id="ex-name"></div>
+    <div class="ex-detail" id="ex-detail"></div>
+    <div id="m-timer">
+      <div class="ring-outer">
+        <svg class="ring-svg" width="176" height="176" viewBox="0 0 176 176">
+          <circle class="ring-bg" cx="88" cy="88" r="74" fill="none" stroke-width="6"/>
+          <circle class="ring-fill" id="ring" cx="88" cy="88" r="74" fill="none" stroke-width="6" stroke-dasharray="464.96" stroke-dashoffset="0"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-num" id="ring-num">2:00</div>
+          <div class="ring-lbl">剩余时间</div>
+        </div>
+      </div>
+    </div>
+    <div id="m-rep" style="display:none;width:100%;text-align:center">
+      <div class="rep-outer">
+        <div class="rep-num" id="rep-n">0</div>
+        <div class="rep-of" id="rep-of">/ 10 次</div>
+        <button class="rep-tap" id="rep-tap" onclick="addRep()">＋ 完成一次</button>
+        <button class="rep-finish" id="rep-fin" style="display:none" onclick="repDone()">已完成，继续下一个 →</button>
+      </div>
+    </div>
+    <div class="ex-cue" id="ex-cue"></div>
+  </div>
+  <div class="ex-controls">
+    <button class="ctrl" onclick="prevEx()">← 上一个</button>
+    <button class="ctrl ctrl-main going" id="pause-btn" onclick="togglePause()">⏸ 暂停</button>
+    <button class="ctrl" onclick="skipEx()">跳过 →</button>
+  </div>
+</div>
+
+<div id="s-rest" class="screen">
+  <p class="rest-next-lbl">下一个动作</p>
+  <div class="rest-name" id="rest-name"></div>
+  <div class="rest-pill" id="rest-pill"></div>
+  <div class="rest-n" id="rest-n">4</div>
+  <p class="rest-hint">稍作调整，即将开始</p>
+</div>
+
+<div id="s-done" class="screen">
+  <div class="done-mark">
+    <svg width="28" height="22" viewBox="0 0 28 22" fill="none" stroke="#4CA86A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="2,11 10,19 26,3"/>
+    </svg>
+  </div>
+  <div class="done-title">训练完成</div>
+  <p class="done-msg">今天的 8 个动作全部完成了。<br>保持每天练习，身体会记住的。</p>
+  <button class="btn-restart" onclick="restart()">再来一次</button>
+</div>
+
+</div>
+<script>
+const CIRC=464.96;
+const EX=[
+  {phase:"释放",pc:"#5DCAA5",name:"右侧髂腰肌拉伸",type:"time",dur:120,switchAt:30,
+   detail:"右侧 90s · 左侧 30s",
+   cue:"弓步跪姿，骨盆轻轻前送\n感受右侧腹股沟深处拉伸感\n自然呼吸，不要憋气",
+   vs:"第一个动作，右侧髂腰肌拉伸。右脚后退，右膝落地，骨盆轻轻前送，感受右侧大腿根和腹股沟深处的拉伸感。自然呼吸，右侧九十秒。",
+   vx:"换左侧，继续三十秒。",ve:"完成。"},
+  {phase:"释放",pc:"#5DCAA5",name:"猫牛式",type:"reps",reps:10,
+   detail:"8–10 个来回",
+   cue:"四足跪姿，手腕在肩正下方\n牛式（吸气）：肚子下沉，头尾骨上抬\n猫式（呼气）：背部拱起，头尾骨下垂\n感受上背部胸椎在动，不是腰",
+   vs:"第二个动作，猫牛式。四足跪姿，吸气时肚子往下沉，头和尾骨往上抬；呼气时背部向上拱起，头和尾骨往下垂。重点感受上背部胸椎在动，不是腰。八到十个来回。",
+   ve:"释放阶段完成，进入核心激活。"},
+  {phase:"核心激活",pc:"#378ADD",name:"90/90 腹式呼吸",type:"time",dur:120,
+   detail:"慢节奏 · 2 分钟",
+   cue:"仰卧，双脚踩椅面或屈膝踩地\n深吸气，肚子鼓起\n呼气末尾，肚脐轻轻往内往下『沉』\n感受腰背部和地面空隙在缩小",
+   vs:"第三个动作，腹式呼吸。仰卧，双脚踩椅面，髋和膝各弯曲九十度。深吸气肚子鼓起，呼气末尾把肚脐轻轻往内往下沉，感受腰背部贴近地面。维持这个感觉，平稳呼吸两分钟。",
+   ve:"完成。"},
+  {phase:"核心激活",pc:"#378ADD",name:"死虫式",type:"reps",reps:16,switchAtRep:8,
+   detail:"每侧 8 次 · 交替进行",
+   cue:"仰卧，双臂向上伸，双腿屈髋 90° 抬起\n缓慢伸出右臂和左腿，接近但不碰地\n全程腰必须贴地，腰一拱起就停\n缓慢收回，换另一边",
+   vs:"第四个动作，死虫式。仰卧，双臂垂直向上伸，双腿屈髋九十度抬起。缓慢把右臂和左腿同时向外伸出，接近但不碰地，全程腰必须贴地，一旦腰拱起就停下。缓慢收回，换另一边。每侧八次。",
+   vx:"右侧完成，换左侧继续。",ve:"完成。"},
+  {phase:"核心激活",pc:"#378ADD",name:"臀桥慢速",type:"reps",reps:10,
+   detail:"10 次 · 顶点停 3s",
+   cue:"仰卧，双脚踩地，脚跟发力\n臀部缓慢抬起，肩髋膝成一条线\n顶点停 3 秒，感受臀和腿后侧收紧\n确认不是腰在撑，缓慢放下",
+   vs:"第五个动作，臀桥慢速。仰卧，双脚踩地，脚跟发力，臀部缓慢抬起到肩髋膝成一条线，顶点停三秒，感受臀部和大腿后侧收紧，不是腰在撑，缓慢放下。做十次。",
+   ve:"核心激活完成，进入上背部激活。"},
+  {phase:"上背部激活",pc:"#8B7FD4",name:"俯卧 W 拉",type:"reps",reps:12,
+   detail:"12 次 · 顶点停 2s",
+   cue:"俯卧，额头轻放在手背上\n双臂弯曲举起呈 W 形，肘部离地\n感受肩胛骨向脊柱方向夹紧\n停 2 秒，缓慢放下，发力点是上背部",
+   vs:"第六个动作，俯卧W拉。俯卧，额头轻放在手背上，双臂弯曲举起呈W形，肘部和手背离地，感受肩胛骨向脊柱方向夹紧，停两秒，缓慢放下。发力点是上背部，不是腰。十二次。",
+   ve:"完成。"},
+  {phase:"上背部激活",pc:"#8B7FD4",name:"靠墙天使",type:"reps",reps:10,
+   detail:"10 次",
+   cue:"背靠墙，脚跟、臀、背、头贴墙\n双臂呈 W 形贴墙\n缓慢上举到 Y 形，手背贴墙\n感受肩胛骨沿墙面滑动，不耸肩",
+   vs:"第七个动作，靠墙天使。背靠墙站立，脚跟、臀、背、头都尽量贴墙，双臂呈W形贴墙，缓慢上举到Y形，全程手背贴墙，感受肩胛骨沿墙面滑动，不要耸肩代偿。十次。",
+   ve:"上背部激活完成，最后一个动作了。"},
+  {phase:"整合",pc:"#D4921A",name:"脚跟着地走路",type:"time",dur:120,
+   detail:"2 分钟",
+   cue:"室内走圈，脚跟先着地，再过渡全脚掌\n感受臀和腿后侧推动身体向前\n检查肩膀是否下沉，上背部是否稳定",
+   vs:"最后一个动作，脚跟着地走路。室内走圈，刻意让脚跟先着地，再过渡到全脚掌，感受臀部和大腿后侧推动身体向前，同时检查肩膀是否下沉，上背部是否稳定。两分钟。",
+   ve:"完成！今天的八个动作全部结束了。明天继续。"}
+];
+
+let idx=0,running=false,voiceOn=true;
+let timeLeft=0,totalDur=0,repsCount=0;
+let ticker=null,restTicker=null;
+let switchedAnnounced=false,warnAnnounced=false,switchRepAnnounced=false;
+
+const synth=window.speechSynthesis;
+let zhVoice=null;
+function loadVoices(){
+  const all=synth.getVoices();
+  zhVoice=all.find(v=>v.lang==='zh-CN'||v.lang==='zh-TW'||v.lang.startsWith('zh'))||null;
+}
+loadVoices();
+if(synth.onvoiceschanged!==undefined)synth.onvoiceschanged=loadVoices;
+
+function speak(text){
+  if(!voiceOn||!text)return;
+  synth.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  if(zhVoice)u.voice=zhVoice;
+  u.lang='zh-CN';u.rate=0.88;u.pitch=1;
+  synth.speak(u);
+}
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
+}
+function fmt(s){return Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60)}
+function setRing(rem,tot){
+  document.getElementById('ring').style.strokeDashoffset=CIRC*(1-(rem/tot));
+  document.getElementById('ring-num').textContent=fmt(rem);
+}
+
+function render(i){
+  const e=EX[i];
+  document.getElementById('ex-idx').textContent=(i+1)+' / '+EX.length;
+  document.getElementById('ex-prog').style.width=((i+1)/EX.length*100)+'%';
+  document.getElementById('ex-prog').style.background=e.pc;
+  const pill=document.getElementById('ex-pill');
+  pill.textContent=e.phase;pill.style.color=e.pc;pill.style.background=e.pc+'28';
+  document.getElementById('ex-name').textContent=e.name;
+  document.getElementById('ex-detail').textContent=e.detail;
+  document.getElementById('ex-cue').textContent=e.cue;
+  if(e.type==='time'){
+    document.getElementById('m-timer').style.display='';
+    document.getElementById('m-rep').style.display='none';
+    document.getElementById('ring').style.stroke=e.pc;
+    totalDur=e.dur;timeLeft=e.dur;
+    switchedAnnounced=false;warnAnnounced=false;
+    setRing(timeLeft,totalDur);
+  } else {
+    document.getElementById('m-timer').style.display='none';
+    document.getElementById('m-rep').style.display='';
+    repsCount=0;switchRepAnnounced=false;
+    document.getElementById('rep-n').textContent='0';
+    document.getElementById('rep-n').style.color=e.pc;
+    document.getElementById('rep-of').textContent='/ '+e.reps+' 次';
+    const tap=document.getElementById('rep-tap');
+    tap.style.background=e.pc;tap.style.color='#060E08';
+    tap.style.display='';
+    document.getElementById('rep-fin').style.display='none';
+  }
+  updatePauseBtn();updateVoiceUI();
+}
+
+function startWorkout(){idx=0;show('exercise');render(0);beginExercise();}
+
+function beginExercise(){
+  running=true;updatePauseBtn();
+  setTimeout(()=>speak(EX[idx].vs),400);
+  if(EX[idx].type==='time')startTick();
+}
+
+function startTick(){
+  clearInterval(ticker);
+  ticker=setInterval(()=>{
+    if(!running)return;
+    timeLeft=Math.max(0,timeLeft-1);
+    setRing(timeLeft,totalDur);
+    const e=EX[idx];
+    if(e.switchAt&&!switchedAnnounced&&timeLeft===e.switchAt){
+      switchedAnnounced=true;speak(e.vx||'换边，继续。');
+    }
+    if(!warnAnnounced&&timeLeft===10&&(!e.switchAt||timeLeft<e.switchAt)){
+      warnAnnounced=true;speak('还有十秒。');
+    }
+    if(timeLeft<=0){clearInterval(ticker);finishExercise();}
+  },1000);
+}
+
+function addRep(){
+  const e=EX[idx];repsCount++;
+  document.getElementById('rep-n').textContent=repsCount;
+  if(e.switchAtRep&&!switchRepAnnounced&&repsCount===e.switchAtRep){
+    switchRepAnnounced=true;speak(e.vx||'换边，继续。');
+  }
+  if(repsCount>=e.reps){
+    document.getElementById('rep-tap').style.display='none';
+    document.getElementById('rep-fin').style.display='';
+    speak('目标次数完成，点击继续。');
+  }
+}
+
+function repDone(){finishExercise();}
+
+function finishExercise(){
+  clearInterval(ticker);
+  const e=EX[idx];
+  if(e.ve)speak(e.ve);
+  const delay=e.ve?1000:200;
+  if(idx>=EX.length-1){setTimeout(()=>show('done'),delay+800);}
+  else{setTimeout(()=>showRest(),delay);}
+}
+
+function showRest(){
+  const next=EX[idx+1];
+  document.getElementById('rest-name').textContent=next.name;
+  const rp=document.getElementById('rest-pill');
+  rp.textContent=next.phase;rp.style.color=next.pc;rp.style.background=next.pc+'28';
+  let c=4;document.getElementById('rest-n').textContent=c;
+  show('rest');
+  clearInterval(restTicker);
+  restTicker=setInterval(()=>{
+    c--;document.getElementById('rest-n').textContent=c;
+    if(c<=0){clearInterval(restTicker);idx++;show('exercise');render(idx);beginExercise();}
+  },1000);
+}
+
+function togglePause(){
+  running=!running;
+  if(!running){clearInterval(ticker);synth.cancel();}
+  else if(EX[idx].type==='time')startTick();
+  updatePauseBtn();
+}
+function skipEx(){
+  clearInterval(ticker);clearInterval(restTicker);synth.cancel();
+  if(idx<EX.length-1)showRest();else show('done');
+}
+function prevEx(){
+  clearInterval(ticker);clearInterval(restTicker);synth.cancel();
+  if(idx>0)idx--;show('exercise');render(idx);beginExercise();
+}
+function restart(){
+  clearInterval(ticker);clearInterval(restTicker);synth.cancel();
+  idx=0;running=false;show('start');
+}
+function updatePauseBtn(){
+  const btn=document.getElementById('pause-btn');
+  if(running){btn.textContent='⏸ 暂停';btn.classList.add('going');}
+  else{btn.textContent='▶ 继续';btn.classList.remove('going');}
+}
+function toggleVoice(){
+  voiceOn=!voiceOn;
+  if(!voiceOn)synth.cancel();
+  updateVoiceUI();
+}
+function updateVoiceUI(){
+  const tog=document.getElementById('tog');
+  const vlab=document.getElementById('vlab');
+  const vbtn=document.getElementById('ex-vbtn');
+  tog.className='tog-track'+(voiceOn?' on':'');
+  if(vlab)vlab.textContent=voiceOn?'语音播报已开启':'语音播报已关闭';
+  if(vbtn){vbtn.textContent=voiceOn?'🔊':'🔇';vbtn.className='ex-voice-btn'+(voiceOn?'':' off');}
+}
+updateVoiceUI();
+</script>
+</body>
+</html>
