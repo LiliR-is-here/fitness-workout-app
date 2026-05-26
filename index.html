@@ -314,9 +314,7 @@ html,body{width:100%;height:100vh;background:var(--bg);color:var(--text);
 <script>
 const CIRC = 464.96;
 
-// bufferBefore: show 30s buffer screen BEFORE this exercise index
 const EX = [
-  // ── 释放 ──────────────────────────────────────────────
   {
     phase:"释放", pc:"#A78BDE",
     name:"猫牛式",
@@ -345,7 +343,6 @@ const EX = [
     vx:"换左侧，继续三十秒。",
     ve:"释放阶段完成。身体已经准备好了，进入轻度激活。"
   },
-  // ── 轻度激活 ──────────────────────────────────────────
   {
     phase:"轻度激活", pc:"#6B4FD8",
     name:"90/90 腹式呼吸",
@@ -365,7 +362,6 @@ const EX = [
     vx:"右侧完成，换左侧继续。",
     ve:"轻度激活完成。接下来进入加强阶段，两个动作之间有缓冲休息。"
   },
-  // ── 加强 ──────────────────────────────────────────────
   {
     phase:"加强", pc:"#4A3A9E",
     name:"臀桥慢速",
@@ -385,7 +381,6 @@ const EX = [
     vs:"第七个动作，俯卧W拉。俯卧，额头轻放在手背上，双臂弯曲举起呈W形，肘部和手背离地，感受肩胛骨向脊柱方向夹紧，停两秒，缓慢放下。发力点是上背部，不是腰。十次。",
     ve:"加强阶段完成。最后一个动作，让身体慢慢还原。"
   },
-  // ── 还原 ──────────────────────────────────────────────
   {
     phase:"还原", pc:"#9B72CC",
     name:"仰卧骨盆归位呼吸",
@@ -523,7 +518,6 @@ function finishExercise(){
   }
 }
 
-// 30s mid-phase buffer between strength exercises
 function startBuf(){
   inBuf=true;
   document.getElementById('m-timer').style.display='none';
@@ -564,7 +558,6 @@ function togglePause(){
   if(!running){ clearInterval(ticker); clearInterval(bufTicker); synth.cancel(); }
   else {
     if(inBuf){
-      // restart buf
       let c=parseInt(document.getElementById('buf-n').textContent)||0;
       clearInterval(bufTicker);
       bufTicker=setInterval(()=>{
